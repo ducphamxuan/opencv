@@ -1,13 +1,10 @@
 import cv2
 import time
 import os
-import numpy as np
-import datetime
 
-duration_hours = 1  #cứ cách một giờ chuyển sang tệp khác để lưu
 log = 1
 
-def capture_images(output_folder, duration_hours):
+def capture_images(output_folder):
     # Mở webcam
     cap = cv2.VideoCapture(0)
 
@@ -16,53 +13,55 @@ def capture_images(output_folder, duration_hours):
         print("Error opening webcam.")
         return
     
-    check = 1   #check =1 nghia la chua ghi anh
+    count = 0   # Số lượng ảnh đã chụp
     start_time = time.time()
-    end_time = start_time + duration_hours * 60 * 60  # Tính thời điểm kết thúc sau một số giờ
-    # Bắt đầu quay và ghi video
-    while 1:
+    start_capture_time = 0  # Thời điểm bắt đầu chụp
+
+    # Bắt đầu quay và ghi ảnh
+    while log:
         ret, frame = cap.read()
+
         # Kiểm tra xem frame có được đọc đúng không
         if not ret:
             print("Error in retrieving frame.")
             break
 
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        # Tính thời gian giữa các frame
+        elapsed_time = time.time() - start_time
 
-        # lay thoi gian de tao ten thu muc
-        if (check == 1) or time.time() >= end_time:
-            time_start_for_folder = current_time
-            output_folder_path = f'{output_folder}/image_{time_start_for_folder}'
-            if not os.path.exists(output_folder_path):
-                os.makedirs(output_folder_path)
-            check = 0
+        # Chờ 3 giây trước khi bắt đầu lưu ảnh
+        if elapsed_time >= 3 and start_capture_time == 0:
+            start_capture_time = time.time()
 
-        if time.time() >= end_time:
-            end_time += duration_hours*60*60    
+        # Chụp ảnh sau khi đã chờ 3 giây
+        if start_capture_time > 0:
+            count += 1
+            current_time_str = time.strftime("%Y-%m-%d %H-%M-%S")
+            output_file = f'{output_folder}/{count}.PNG'
 
-        output_file = f'{output_folder_path}/image_{current_time}.PNG'
+            # Hiển thị thời gian trên ảnh
+            cv2.putText(frame, current_time_str, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-        # Hiển thị thời gian trên ảnh
-        cv2.putText(frame, current_time, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        # Lưu ảnh vào thư mục
-        cv2.imwrite(output_file, frame)
+            # Lưu ảnh vào thư mục
+            cv2.imwrite(output_file, frame)
 
-        # Hiển thị ảnh trong cửa sổ
-        cv2.imshow('Captured Image', frame)
+            # Hiển thị ảnh trong cửa sổ
+            cv2.imshow('Captured Image', frame)
+
+            # Đặt lại thời gian bắt đầu cho frame tiếp theo
+            start_time = time.time()
 
         # Kiểm tra phím 'q' để thoát
-        if (cv2.waitKey(1) == ord('q')) or (log == 0):
-            cap.release
-            cv2.destroyAllWindows
-            break    
+        if cv2.waitKey(1) == ord('q'):
+            break
 
+    # Giải phóng tài nguyên khi kết thúc
+    cap.release()
+    cv2.destroyAllWindows()
 
 output_folder = 'output_images'
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
-# Gọi hàm để chụp ảnh và ghi lại mỗi giờ
-while log:
-    capture_images(output_folder, duration_hours)
-
-
+# Gọi hàm để chụp ảnh và ghi lại mỗi 50ms
+capture_images(output_folder)
